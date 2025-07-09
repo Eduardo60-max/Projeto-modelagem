@@ -1,18 +1,18 @@
 from flask import Flask, render_template, request, redirect, url_for
-from datetime import datetime 
+from datetime import datetime
 
 app = Flask(__name__)
 
-weekly_priorities = [
-    {"id": 1, "text": "Finalizar tarefas", "completed": False},
-    {"id": 2, "text": "Visitar a tia Mae", "completed": False},
+prioridades_semanais = [
+    {"id": 1, "texto": "Finalizar tarefas", "concluida": False},
+    {"id": 2, "texto": "Visitar a tia Mae", "concluida": False},
 ]
 
-habits = [
-    {"id": 1, "text": "Dormir", "days": {"M": False, "T": False, "W": False, "Th": False, "F": False, "Sa": False, "Su": False}, "hours": {"M": 0, "T": 0, "W": 0, "Th": 0, "F": 0, "Sa": 0, "Su": 0}},
+habitos = [
+    {"id": 1, "texto": "Dormir", "dias": {"S": False, "T": False, "Q": False, "Qi": False, "Se": False, "Sa": False, "D": False}, "horas": {"S": 0, "T": 0, "Q": 0, "Qi": 0, "Se": 0, "Sa": 0, "D": 0}},
 ]
 
-tasks = {
+tarefas_diarias = {
     "Segunda": [],
     "Terça": [],
     "Quarta": [],
@@ -22,16 +22,16 @@ tasks = {
     "Domingo": [],
 }
 
-next_priority_id = 3
-next_habit_id = 2
+proximo_id_prioridade = 3
+proximo_id_habito = 2
+
+ORDEM_PRIORIDADE = {'alta': 1, 'media': 2, 'baixa': 3}
 
 @app.route('/')
-def index():
-    
-    current_date_obj = datetime.now()
+def inicio():
+    data_atual_obj = datetime.now()
 
-    
-    dias_semana_map = {
+    mapa_dias_semana = {
         "Monday": "Segunda-feira",
         "Tuesday": "Terça-feira",
         "Wednesday": "Quarta-feira",
@@ -40,7 +40,7 @@ def index():
         "Saturday": "Sábado",
         "Sunday": "Domingo"
     }
-    meses_map = {
+    mapa_meses = {
         "January": "Janeiro",
         "February": "Fevereiro",
         "March": "Março",
@@ -55,88 +55,101 @@ def index():
         "December": "Dezembro"
     }
 
-    
-    formatted_date_en = current_date_obj.strftime("%A, %d de %B de %Y")
+    data_formatada_ingles = data_atual_obj.strftime("%A, %d de %B de %Y")
 
-    
-    current_date_pt = formatted_date_en
-    for en, pt in dias_semana_map.items():
-        current_date_pt = current_date_pt.replace(en, pt)
-    for en, pt in meses_map.items():
-        current_date_pt = current_date_pt.replace(en, pt)
+    data_atual_portugues = data_formatada_ingles
+    for en, pt in mapa_dias_semana.items():
+        data_atual_portugues = data_atual_portugues.replace(en, pt)
+    for en, pt in mapa_meses.items():
+        data_atual_portugues = data_atual_portugues.replace(en, pt)
+
+    tarefas_diarias_ordenadas = {}
+    for dia, tarefas_do_dia in tarefas_diarias.items():
+        tarefas_concluidas = [t for t in tarefas_do_dia if t['concluida']]
+        tarefas_pendentes = [t for t in tarefas_do_dia if not t['concluida']]
+
+        tarefas_pendentes.sort(key=lambda x: ORDEM_PRIORIDADE.get(x.get('prioridade', 'baixa'), 99))
+        
+        tarefas_diarias_ordenadas[dia] = tarefas_pendentes + tarefas_concluidas
 
     return render_template('index.html',
-                            weekly_priorities=weekly_priorities,
-                            habits=habits,
-                            tasks=tasks,
-                            current_date=current_date_pt) 
+                            prioridades_semanais=prioridades_semanais,
+                            habitos=habitos,
+                            tarefas_diarias=tarefas_diarias_ordenadas,
+                            data_atual=data_atual_portugues)
 
-@app.route('/add_priority', methods=['POST'])
-def add_priority():
-    global next_priority_id
-    new_priority_text = request.form.get('new_priority')
-    if new_priority_text:
-        weekly_priorities.append({"id": next_priority_id, "text": new_priority_text, "completed": False})
-        next_priority_id += 1
-    return redirect(url_for('index'))
+@app.route('/adicionar_prioridade', methods=['POST'])
+def adicionar_prioridade():
+    global proximo_id_prioridade
+    novo_texto_prioridade = request.form.get('nova_prioridade')
+    if novo_texto_prioridade:
+        prioridades_semanais.append({"id": proximo_id_prioridade, "texto": novo_texto_prioridade, "concluida": False})
+        proximo_id_prioridade += 1
+    return redirect(url_for('inicio'))
 
-@app.route('/remove_priority/<int:priority_id>')
-def remove_priority(priority_id):
-    global weekly_priorities
-    weekly_priorities = [p for p in weekly_priorities if p['id'] != priority_id]
-    return redirect(url_for('index'))
+@app.route('/remover_prioridade/<int:prioridade_id>')
+def remover_prioridade(prioridade_id):
+    global prioridades_semanais
+    prioridades_semanais = [p for p in prioridades_semanais if p['id'] != prioridade_id]
+    return redirect(url_for('inicio'))
 
-@app.route('/toggle_priority/<int:priority_id>')
-def toggle_priority(priority_id):
-    for priority in weekly_priorities:
-        if priority['id'] == priority_id:
-            priority['completed'] = not priority['completed']
+@app.route('/alternar_prioridade/<int:prioridade_id>')
+def alternar_prioridade(prioridade_id):
+    for prioridade in prioridades_semanais:
+        if prioridade['id'] == prioridade_id:
+            prioridade['concluida'] = not prioridade['concluida']
             break
-    return redirect(url_for('index'))
+    return redirect(url_for('inicio'))
 
-@app.route('/add_habit', methods=['POST'])
-def add_habit():
-    global next_habit_id
-    new_habit_text = request.form.get('new_habit')
-    if new_habit_text:
-        habits.append({
-            "id": next_habit_id,
-            "text": new_habit_text,
-            "days": {"M": False, "T": False, "W": False, "Th": False, "F": False, "Sa": False, "Su": False},
-            "hours": {"M": 0, "T": 0, "W": 0, "Th": 0, "F": 0, "Sa": 0, "Su": 0}
+@app.route('/adicionar_habito', methods=['POST'])
+def adicionar_habito():
+    global proximo_id_habito
+    novo_texto_habito = request.form.get('novo_habito')
+    if novo_texto_habito:
+        habitos.append({
+            "id": proximo_id_habito,
+            "texto": novo_texto_habito,
+            "dias": {"S": False, "T": False, "Q": False, "Qi": False, "Se": False, "Sa": False, "D": False},
+            "horas": {"S": 0, "T": 0, "Q": 0, "Qi": 0, "Se": 0, "Sa": 0, "D": 0}
         })
-        next_habit_id += 1
-    return redirect(url_for('index'))
+        proximo_id_habito += 1
+    return redirect(url_for('inicio'))
 
-@app.route('/update_habit/<int:habit_id>', methods=['POST'])
-def update_habit(habit_id):
-    for habit in habits:
-        if habit["id"] == habit_id:
-            for day_short in ['M', 'T', 'W', 'Th', 'F', 'Sa', 'Su']:
-                habit["days"][day_short] = (f'habit_day_{habit_id}_{day_short}' in request.form)
-                habit["hours"][day_short] = int(request.form.get(f'hour_{habit_id}_{day_short}', 0))
+@app.route('/atualizar_habito/<int:habito_id>', methods=['POST'])
+def atualizar_habito(habito_id):
+    for habito in habitos:
+        if habito["id"] == habito_id:
+            for dia_curto in ['S', 'T', 'Q', 'Qi', 'Se', 'Sa', 'D']:
+                habito["dias"][dia_curto] = (f'dia_habito_{habito_id}_{dia_curto}' in request.form)
+                habito["horas"][dia_curto] = int(request.form.get(f'hora_{habito_id}_{dia_curto}', 0))
             break
-    return redirect(url_for('index'))
+    return redirect(url_for('inicio'))
 
 
-@app.route('/add_task/<day>', methods=['POST'])
-def add_task(day):
-    new_task_text = request.form.get(f'new_task_{day}')
-    if new_task_text and day in tasks:
-        tasks[day].append({"text": new_task_text, "completed": False})
-    return redirect(url_for('index'))
+@app.route('/adicionar_tarefa/<dia>')
+def adicionar_tarefa(dia):
+    return redirect(url_for('inicio'))
 
-@app.route('/toggle_task/<day>/<int:task_index>')
-def toggle_task(day, task_index):
-    if day in tasks and 0 <= task_index < len(tasks[day]):
-        tasks[day][task_index]['completed'] = not tasks[day][task_index]['completed']
-    return redirect(url_for('index'))
+@app.route('/adicionar_tarefa/<dia>', methods=['POST'])
+def adicionar_tarefa_post(dia):
+    novo_texto_tarefa = request.form.get(f'nova_tarefa_{dia}')
+    prioridade_tarefa = request.form.get(f'prioridade_{dia}', 'baixa')
+    if novo_texto_tarefa and dia in tarefas_diarias:
+        tarefas_diarias[dia].append({"texto": novo_texto_tarefa, "concluida": False, "prioridade": prioridade_tarefa})
+    return redirect(url_for('inicio'))
 
-@app.route('/remove_task/<day>/<int:task_index>')
-def remove_task(day, task_index):
-    if day in tasks and 0 <= task_index < len(tasks[day]):
-        del tasks[day][task_index]
-    return redirect(url_for('index'))
+
+@app.route('/alternar_tarefa/<dia>/<int:indice_tarefa>')
+def alternar_tarefa(dia, indice_tarefa):
+    if dia in tarefas_diarias and 0 <= indice_tarefa < len(tarefas_diarias[dia]):
+        tarefas_diarias[dia][indice_tarefa]['concluida'] = not tarefas_diarias[dia][indice_tarefa]['concluida']
+    return redirect(url_for('inicio'))
+
+@app.route('/remover_tarefa/<dia>/<int:indice_tarefa>')
+def remover_tarefa(dia, indice_tarefa):
+    if dia in tarefas_diarias and 0 <= indice_tarefa < len(tarefas_diarias[dia]):
+        del tarefas_diarias[dia][indice_tarefa]
+    return redirect(url_for('inicio'))
 
 if __name__ == '__main__':
     app.run(debug=True)

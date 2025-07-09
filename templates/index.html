@@ -1,37 +1,36 @@
-/*nhe*/
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Painel Pessoal</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='estilo.css') }}">
 </head>
 <body>
     <div class="container">
         <h1>Painel Pessoal</h1>
-        <p class="date">{{ current_date }}</p> 
+        <p class="data">{{ data_atual }}</p>
 
-        <div class="section">
+        <div class="secao">
             <h2>Prioridades Semanais</h2>
-            <ul class="priority-list">
-                {% for priority in weekly_priorities %}
+            <ul class="lista-prioridades">
+                {% for prioridade in prioridades_semanais %}
                 <li>
-                    <input type="checkbox" {% if priority.completed %}checked{% endif %} onchange="window.location.href='{{ url_for('toggle_priority', priority_id=priority.id) }}'">
-                    <span>{{ priority.text }}</span>
-                    <a href="{{ url_for('remove_priority', priority_id=priority.id) }}" class="remove-btn">x</a>
+                    <input type="checkbox" {% if prioridade.concluida %}checked{% endif %} onchange="window.location.href='{{ url_for('alternar_prioridade', prioridade_id=prioridade.id) }}'">
+                    <span>{{ prioridade.texto }}</span>
+                    <a href="{{ url_for('remover_prioridade', prioridade_id=prioridade.id) }}" class="botao-remover">x</a>
                 </li>
                 {% endfor %}
             </ul>
-            <form action="{{ url_for('add_priority') }}" method="post" class="add-form">
-                <input type="text" name="new_priority" placeholder="Adicionar uma nova prioridade...">
+            <form action="{{ url_for('adicionar_prioridade') }}" method="post" class="form-adicionar">
+                <input type="text" name="nova_prioridade" placeholder="Adicionar nova prioridade...">
                 <button type="submit">Adicionar</button>
             </form>
         </div>
 
-        <div class="section">
+        <div class="secao">
             <h2>Rastreamento de Hábitos</h2>
-            <div class="habit-tracker-header">
+            <div class="cabecalho-rastreador-habito">
                 <span>Hábito</span>
                 <span>Seg</span>
                 <span>Ter</span>
@@ -42,47 +41,52 @@
                 <span>Dom</span>
                 <span>Ações</span>
             </div>
-            <div class="habit-tracker-rows">
-                {% for habit in habits %}
-                <form action="{{ url_for('update_habit', habit_id=habit.id) }}" method="post" class="habit-row">
-                    <span class="habit-name">{{ habit.text }}</span>
-                    <div class="habit-days-container">
-                        {% for day in ['M', 'T', 'W', 'Th', 'F', 'Sa', 'Su'] %}
-                            <div class="habit-day-item">
-                                <input type="checkbox" name="habit_day_{{ habit.id }}_{{ day }}" {% if habit.days[day] %}checked{% endif %}>
-                                <select name="hour_{{ habit.id }}_{{ day }}" class="habit-hour-select">
-                                    {% for hour_val in range(24) %}
-                                        <option value="{{ hour_val }}" {% if habit.hours[day] == hour_val %}selected{% endif %}>{{ '%02d:00' | format(hour_val) }}</option>
+            <div class="linhas-rastreador-habito">
+                {% for habito in habitos %}
+                <form action="{{ url_for('atualizar_habito', habito_id=habito.id) }}" method="post" class="linha-habito">
+                    <span class="nome-habito">{{ habito.texto }}</span>
+                    <div class="container-dias-habito">
+                        {% for dia in ['S', 'T', 'Q', 'Qi', 'Se', 'Sa', 'D'] %}
+                            <div class="item-dia-habito">
+                                <input type="checkbox" name="dia_habito_{{ habito.id }}_{{ dia }}" {% if habito.dias[dia] %}checked{% endif %}>
+                                <select name="hora_{{ habito.id }}_{{ dia }}" class="selecionar-hora-habito">
+                                    {% for valor_hora in range(24) %}
+                                        <option value="{{ valor_hora }}" {% if habito.horas[dia] == valor_hora %}selected{% endif %}>{{ '%02d:00' | format(valor_hora) }}</option>
                                     {% endfor %}
                                 </select>
                             </div>
                         {% endfor %}
-                        <button type="submit" class="update-btn">Atualizar</button>
+                        <button type="submit" class="botao-atualizar">Atualizar</button>
                     </div>
                 </form>
                 {% endfor %}
             </div>
-            <form action="{{ url_for('add_habit') }}" method="post" class="add-form habit-add-form">
-                <input type="text" name="new_habit" placeholder="Adicionar um novo hábito...">
+            <form action="{{ url_for('adicionar_habito') }}" method="post" class="form-adicionar form-adicionar-habito">
+                <input type="text" name="novo_habito" placeholder="Adicionar novo hábito...">
                 <button type="submit">Adicionar</button>
             </form>
         </div>
 
-        <div class="daily-tasks-grid">
-            {% for day_name, day_tasks in tasks.items() %}
-            <div class="daily-task-column">
-                <h3>{{ day_name }}</h3>
-                <ul class="task-list">
-                    {% for task in day_tasks %}
-                    <li>
-                        <input type="checkbox" {% if task.completed %}checked{% endif %} onchange="window.location.href='{{ url_for('toggle_task', day=day_name, task_index=loop.index0) }}'">
-                        <span>{{ task.text }}</span>
-                        <a href="{{ url_for('remove_task', day=day_name, task_index=loop.index0) }}" class="remove-btn">x</a>
+        <div class="grid-tarefas-diarias">
+            {% for nome_dia, tarefas_do_dia in tarefas_diarias.items() %}
+            <div class="coluna-tarefa-diaria">
+                <h3>{{ nome_dia }}</h3>
+                <ul class="lista-tarefas">
+                    {% for tarefa in tarefas_do_dia %}
+                    <li class="item-tarefa {% if tarefa.concluida %}concluida{% endif %}">
+                        <input type="checkbox" {% if tarefa.concluida %}checked{% endif %} onchange="window.location.href='{{ url_for('alternar_tarefa', dia=nome_dia, indice_tarefa=loop.index0) }}'">
+                        <span class="texto-tarefa {% if tarefa.prioridade %}{{ tarefa.prioridade }}-prioridade{% endif %}">{{ tarefa.texto }}</span>
+                        <a href="{{ url_for('remover_tarefa', dia=nome_dia, indice_tarefa=loop.index0) }}" class="botao-remover">x</a>
                     </li>
                     {% endfor %}
                 </ul>
-                <form action="{{ url_for('add_task', day=day_name) }}" method="post" class="add-form">
-                    <input type="text" name="new_task_{{ day_name }}" placeholder="Adicionar tarefa para {{ day_name }}...">
+                <form action="{{ url_for('adicionar_tarefa_post', dia=nome_dia) }}" method="post" class="form-adicionar-tarefa">
+                    <input type="text" name="nova_tarefa_{{ nome_dia }}" placeholder="Adicionar tarefa para {{ nome_dia }}...">
+                    <select name="prioridade_{{ nome_dia }}" class="selecionar-prioridade-tarefa">
+                        <option value="baixa">Prioridade Baixa</option>
+                        <option value="media">Prioridade Média</option>
+                        <option value="alta">Prioridade Alta</option>
+                    </select>
                     <button type="submit">Adicionar</button>
                 </form>
             </div>
